@@ -66,7 +66,13 @@ ChartJS.register(
   Filler
 );
 
+
 // Types for our data models
+
+interface User {
+  username: string;
+  // Add other user properties you need
+}
 interface WeatherData {
   temperature: number;
   condition: 'sunny' | 'cloudy' | 'rainy' | 'stormy';
@@ -368,7 +374,7 @@ const getIrrigationStatusStyle = (status: IrrigationZone['status']) => {
 
 export default function Dashboard() {
   // State for handling interactive elements
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'crops' | 'irrigation'>('overview');
   const [showNotifications, setShowNotifications] = useState(false);
   const [cropViewMode, setCropViewMode] = useState<'grid' | 'list'>('grid');
@@ -688,7 +694,10 @@ export default function Dashboard() {
                   {user?.username ? user.username.charAt(0).toUpperCase() : 'G'}
                 </div>
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-800">{user?.username || 'Guest User'}</p>
+                  <p className="text-sm font-medium text-gray-800">
+                  {user && typeof user === 'object' && 'username' in user && user.username 
+  ? user.username.charAt(0).toUpperCase() 
+  : 'G'}
                   <p className="text-xs text-gray-500">Farmer</p>
                 </div>
               </div>
