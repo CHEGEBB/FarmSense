@@ -81,11 +81,11 @@ export default function ReportsPage() {
   }, []);
 
   // Simulate export functionality
-  interface ExportOptions {
-    format: 'pdf' | 'csv' | 'excel';
-  }
+  // interface ExportOptions {
+  //   format: 'pdf' | 'csv' | 'excel';
+  // }
 
-  const handleExport = (format: ExportOptions['format']): void => {
+  const handleExport = (format)=> {
     setIsExporting(true);
     setTimeout(() => {
       setIsExporting(false);
@@ -95,11 +95,11 @@ export default function ReportsPage() {
   };
 
   // Toggle card expansion
-  interface ToggleCardExpansionProps {
-    cardId: string;
-  }
+  // interface ToggleCardExpansionProps {
+  //   cardId: string;
+  // }
 
-  const toggleCardExpansion = ({ cardId }: ToggleCardExpansionProps): void => {
+  const toggleCardExpansion = ({ cardId })=> {
     if (expandedCard === cardId) {
       setExpandedCard(null);
     } else {
@@ -777,8 +777,8 @@ export default function ReportsPage() {
                         callbacks: {
                           label: function(context) {
                             const total = context.dataset.data.reduce((acc, val) => acc + val, 0);
-                            const percentage = Math.round(((context.raw as number) / total) * 100);
-                            const value = (context.raw as number).toLocaleString('en-US', {
+                            const percentage = Math.round(((context.raw) / total) * 100);
+                            const value = (context.raw).toLocaleString('en-US', {
                               style: 'currency',
                               currency: 'USD',
                               minimumFractionDigits: 0
