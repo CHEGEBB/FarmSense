@@ -694,7 +694,7 @@ export default function Dashboard() {
                 <div className="hidden md:block">
                   <p className="text-sm font-medium text-gray-800">
                   {user && typeof user === 'object' && 'username' in user && user.username 
-  ? user.username.charAt(0).toUpperCase() 
+  ? user.username
   : 'G'}
   </p>
                   <p className="text-xs text-gray-500">Farmer</p>
