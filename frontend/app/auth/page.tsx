@@ -138,7 +138,7 @@ export default function AuthScreen() {
         
         // Store auth data
         if (response && response.token) {
-          authService.setAuthData(response.token, response.user);
+          authService.setAuthData(response.token, response.user as { id: string; username: string; email: string });
           
           setShowSuccess(true);
           setTimeout(() => {
@@ -172,7 +172,19 @@ export default function AuthScreen() {
           setShowSuccess(true);
           setTimeout(() => {
             // Store auth data and redirect, or switch to login
-            authService.setAuthData(response.token, response.user);
+            interface User {
+              id: string;
+              username: string;
+              email: string;
+              [key: string]: unknown; // Add index signature
+            }
+
+            const user: User = {
+              id: response.user.id as string,
+              username: response.user.username as string,
+              email: response.user.email as string,
+            };
+            authService.setAuthData(response.token, user);
             router.push('/dashboard');
           }, 1000);
         } else {
