@@ -371,7 +371,6 @@ const getIrrigationStatusStyle = (status: IrrigationZone['status']) => {
       return 'bg-gray-100 text-gray-800';
   }
 };
-
 export default function Dashboard() {
   // State for handling interactive elements
   const [user, setUser] = useState<User | null>(null);
@@ -585,7 +584,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar Component (imported) */}
       <Sidebar />
       
       {/* Main Content */}
@@ -698,6 +696,7 @@ export default function Dashboard() {
                   {user && typeof user === 'object' && 'username' in user && user.username 
   ? user.username.charAt(0).toUpperCase() 
   : 'G'}
+  </p>
                   <p className="text-xs text-gray-500">Farmer</p>
                 </div>
               </div>
@@ -2178,4 +2177,6 @@ export default function Dashboard() {
       </div>
     </div>
   );
+
+  
 }
