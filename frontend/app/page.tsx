@@ -11,8 +11,6 @@ import {
   BarChart2, 
   Sprout, 
   SunDim,
-  Menu, 
-  X,
   ChevronDown
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
