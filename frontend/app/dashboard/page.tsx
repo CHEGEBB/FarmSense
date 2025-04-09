@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useContext } from 'react';
+import { useState, useEffect, useRef} from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { 
@@ -9,13 +9,10 @@ import {
   CloudRain, 
   Droplets, 
   Wind,
-  LucideIcon,
   Tractor,
-  SeedingOutline,
   Activity,
   CalendarDays,
   TrendingUp,
-  DollarSign,
   AlertOctagon,
   ChevronRight,
   Bell,
@@ -25,23 +22,21 @@ import {
   Check,
   X,
   Search,
-  Filter,
   Thermometer,
   CloudDrizzle,
   ArrowUpRight,
   ArrowDownRight,
   CheckCircle,
-  BarChart3,
   MessageSquare,
   Settings,
-  ArrowRight,
-  LayoutDashboard,
   Wheat,
   Clock,
   TractorIcon
 } from 'lucide-react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import "../../sass/fonts.scss";
+import { getStoredUser, isAuthenticated } from '../../services/authService';
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -55,7 +50,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import Sidebar, { SidebarContext } from '../../components/Sidebar';
+import Sidebar from '../../components/Sidebar';
 
 // Register ChartJS components
 ChartJS.register(
@@ -339,7 +334,7 @@ const getTaskTypeIcon = (type: TaskData['type']) => {
     case 'maintenance':
       return <Settings size={16} className="text-gray-500" />;
     default:
-      return <SeedingOutline size={16} className="text-green-500" />;
+      return <Tractor size={16} className="text-green-500" />;
   }
 };
 
@@ -373,7 +368,7 @@ const getIrrigationStatusStyle = (status: IrrigationZone['status']) => {
 
 export default function Dashboard() {
   // State for handling interactive elements
-  const { isOpen, sidebarWidth } = useContext(SidebarContext);
+  const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'crops' | 'irrigation'>('overview');
   const [showNotifications, setShowNotifications] = useState(false);
   const [cropViewMode, setCropViewMode] = useState<'grid' | 'list'>('grid');
@@ -382,6 +377,7 @@ export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [greeting, setGreeting] = useState('');
   const [unreadNotifications, setUnreadNotifications] = useState<NotificationData[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [userWeather, setUserWeather] = useState(weatherData);
   const [cropData, setCropData] = useState(crops);
   const [taskList, setTaskList] = useState(upcomingTasks);
@@ -392,6 +388,12 @@ export default function Dashboard() {
   
   const notificationRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+
+//   let displayName = 'Farmer';
+  
+// if (user && user.username) {
+//   displayName = user.username;
+// }
 
   // Calculate the appropriate greeting based on time of day
   useEffect(() => {
@@ -408,6 +410,16 @@ export default function Dashboard() {
   // Filter unread notifications
   useEffect(() => {
     setUnreadNotifications(notifications.filter(n => !n.read));
+  }, []);
+
+  useEffect(() => {
+    const currentUser = getStoredUser();
+    setUser(currentUser);
+    
+    // Also add authentication check if needed
+    if (!isAuthenticated()) {
+      // Handle unauthenticated state
+    }
   }, []);
 
   // Handle outside click for notifications dropdown
@@ -573,10 +585,6 @@ export default function Dashboard() {
       {/* Main Content */}
       <div 
         className="flex-1"
-        style={{ 
-          marginLeft: sidebarWidth,
-          transition: 'margin-left 0.3s ease-in-out'
-        }}
       >
         {/* Header */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -676,10 +684,11 @@ export default function Dashboard() {
               {/* User profile */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
-                  JD
+                  {/* get initials of user from username */}
+                  {user?.username ? user.username.charAt(0).toUpperCase() : 'G'}
                 </div>
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-800">John Deere</p>
+                  <p className="text-sm font-medium text-gray-800">{user?.username || 'Guest User'}</p>
                   <p className="text-xs text-gray-500">Farmer</p>
                 </div>
               </div>
@@ -751,7 +760,9 @@ export default function Dashboard() {
             <div className="relative z-20 p-6 md:p-8 text-white">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                 <div className="mb-4 md:mb-0">
-                  <h2 className="text-xl md:text-2xl lg:text-3xl font-bold mb-2">{greeting}, John</h2>
+                <h2 className="text-xl md:text-2xl lg:text-3xl font-bold mb-2">
+          {greeting},{user?.username}
+        </h2>
                   <p className="text-emerald-100 text-sm md:text-base max-w-lg">
                     Your crops are doing well today. There are 2 tasks that require your attention.
                   </p>
@@ -1546,10 +1557,14 @@ export default function Dashboard() {
                         // Simulate updating all irrigation zones
                         const updated = irrigationData.map(zone => ({
                           ...zone,
-                          status: 'active',
+                          // eslint-disable-next-line @typescript-eslint/prefer-as-const
+                          status: 'active' as 'active', // Explicitly type the status
                           lastIrrigated: new Date().toLocaleString()
                         }));
-                        setIrrigationData(updated);
+                        setIrrigationData(updated.map(zone => ({
+                          ...zone,
+                          status: zone.status as 'active' | 'scheduled' | 'inactive',
+                        })));
                         setActiveIrrigation(updated.map(zone => zone.id));
                       }}
                     >
@@ -1565,7 +1580,10 @@ export default function Dashboard() {
                           ...zone,
                           status: 'inactive'
                         }));
-                        setIrrigationData(updated);
+                        setIrrigationData(updated.map(zone => ({
+                          ...zone,
+                          status: zone.status as 'active' | 'scheduled' | 'inactive',
+                        })));
                         setActiveIrrigation([]);
                       }}
                     >

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { 
   Mail, 
   Lock, 
@@ -12,9 +13,11 @@ import {
   Droplets,
   Wheat,
   Sprout,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
-import "../../sass/fonts.scss"
+import "../../sass/fonts.scss";
+import * as authService from '../../services/authService';
 
 // Farm-themed carousel content with images
 const carouselContent = [
@@ -45,6 +48,7 @@ const carouselContent = [
 ];
 
 export default function AuthScreen() {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [email, setEmail] = useState('');
@@ -56,12 +60,18 @@ export default function AuthScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isPasswordValid, setIsPasswordValid] = useState(false);
   const [activeInput, setActiveInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // For development/demo purposes
-  const hardcodedCredentials = {
-    email: 'test@gmail.com',
-    password: 'test2025'
-  };
+  // Check if user is already authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (await authService.isAuthenticated()) {
+        router.push('/dashboard');
+      }
+    };
+    
+    checkAuth();
+  }, [router]);
 
   // Auto-rotate carousel
   useEffect(() => {
@@ -73,58 +83,112 @@ export default function AuthScreen() {
 
   // Password validation
   useEffect(() => {
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasLowercase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecial = /[^A-Za-z0-9]/.test(password);
-    const hasLength = password.length >= 8;
+    if (!password) {
+      setIsPasswordValid(false);
+      return;
+    }
     
-    setIsPasswordValid(hasUppercase && hasLowercase && hasNumber && hasSpecial && hasLength);
+    // Less strict password validation
+    // Require at least 2 of the following: uppercase, lowercase, number, special char
+    // And minimum length of 6
+    let score = 0;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/[a-z]/.test(password)) score += 1;
+    if (/[0-9]/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    
+    const hasLength = password.length >= 6;
+    
+    setIsPasswordValid(score >= 2 && hasLength);
   }, [password]);
 
-  const handleAuth = (e) => {
+  interface LoginCredentials {
+    email: string;
+    password: string;
+  }
+
+  interface RegisterData {
+    username: string;
+    email: string;
+    password: string;
+  }
+
+  interface AuthResponse {
+    token: string;
+    user: Record<string, unknown>;
+  }
+
+  const handleAuth = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     
     // Clear any previous messages
     setShowSuccess(false);
     setShowError(false);
-    
-    if (isLogin) {
-      // Login validation
-      if (email === hardcodedCredentials.email && password === hardcodedCredentials.password) {
-        setShowSuccess(true);
-        setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 1000);
+    setIsLoading(true);
+
+    try {
+      if (isLogin) {
+        // Login logic
+        if (!email || !password) {
+          throw new Error('Email and password are required');
+        }
+        
+        const credentials: LoginCredentials = { email, password };
+        const response: AuthResponse = await authService.login(credentials);
+        
+        // Store auth data
+        if (response && response.token) {
+          authService.setAuthData(response.token, response.user);
+          
+          setShowSuccess(true);
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 1000);
+        } else {
+          throw new Error('Invalid login response');
+        }
       } else {
-        setErrorMessage('Invalid email or password');
-        setShowError(true);
+        // Signup validation
+        if (!email || !username || !password || !confirmPassword) {
+          throw new Error('All fields are required');
+        }
+        
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+        
+        if (!isPasswordValid) {
+          throw new Error('Password must be at least 6 characters and include 2 of the following: uppercase, lowercase, number, or special character');
+        }
+        
+        // Register new user
+        const userData: RegisterData = { username, email, password };
+        console.log('Sending registration data:', userData);
+        
+        const response: AuthResponse = await authService.register(userData);
+        console.log('Registration response:', response);
+        
+        if (response && response.token) {
+          setShowSuccess(true);
+          setTimeout(() => {
+            // Store auth data and redirect, or switch to login
+            authService.setAuthData(response.token, response.user);
+            router.push('/dashboard');
+          }, 1000);
+        } else {
+          throw new Error('Registration failed');
+        }
       }
-    } else {
-      // Signup validation
-      if (!email || !username || !password || !confirmPassword) {
-        setErrorMessage('All fields are required');
-        setShowError(true);
-        return;
+    } catch (error) {
+      console.error('Auth error:', error);
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Authentication failed');
       }
-      
-      if (password !== confirmPassword) {
-        setErrorMessage('Passwords do not match');
-        setShowError(true);
-        return;
-      }
-      
-      if (!isPasswordValid) {
-        setErrorMessage('Please create a stronger password');
-        setShowError(true);
-        return;
-      }
-      
-      // Success - in real app would make API call
-      setShowSuccess(true);
-      setTimeout(() => {
-        setIsLogin(true);
-      }, 1000);
+      setShowError(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -137,7 +201,7 @@ export default function AuthScreen() {
     if (/[a-z]/.test(password)) score += 1;
     if (/[0-9]/.test(password)) score += 1;
     if (/[^A-Za-z0-9]/.test(password)) score += 1;
-    if (password.length >= 8) score += 1;
+    if (password.length >= 6) score += 1;
     
     return (score / 5) * 100;
   };
@@ -151,7 +215,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden text-black">
       {/* Left Panel - Image with content */}
       <div className="h-1/3 md:h-auto md:w-1/2 relative hidden md:block">
         {/* Background Image */}
@@ -277,7 +341,11 @@ export default function AuthScreen() {
           <div className="flex justify-center mb-8">
             <div className="inline-flex p-1 bg-gray-100 rounded-xl shadow-sm">
               <button 
-                onClick={() => setIsLogin(true)}
+                onClick={() => {
+                  setIsLogin(true);
+                  setShowError(false);
+                  setShowSuccess(false);
+                }}
                 className={`px-8 py-2 rounded-lg text-sm font-medium transition-all ${
                   isLogin 
                     ? 'bg-emerald-500 text-white shadow-md transform scale-105' 
@@ -287,7 +355,11 @@ export default function AuthScreen() {
                 Login
               </button>
               <button 
-                onClick={() => setIsLogin(false)}
+                onClick={() => {
+                  setIsLogin(false);
+                  setShowError(false);
+                  setShowSuccess(false);
+                }}
                 className={`px-8 py-2 rounded-lg text-sm font-medium transition-all ${
                   !isLogin 
                     ? 'bg-indigo-500 text-white shadow-md transform scale-105' 
@@ -368,6 +440,7 @@ export default function AuthScreen() {
                         ? 'border-emerald-500' 
                         : 'border-gray-300'
                     }`}
+                    required
                   />
                 </div>
 
@@ -393,6 +466,7 @@ export default function AuthScreen() {
                         ? 'border-emerald-500' 
                         : 'border-gray-300'
                     }`}
+                    required
                   />
                 </div>
 
@@ -420,10 +494,11 @@ export default function AuthScreen() {
                             ? 'border-emerald-500' 
                             : 'border-gray-300'
                         }`}
+                        required
                       />
                     </div>
 
-                    {/* Compact password strength indicator - only shows when password field has content */}
+                    {/* Password strength indicator - only shows when password field has content */}
                     {password && (
                       <div className="space-y-1">
                         <div className="flex justify-between items-center">
@@ -440,6 +515,10 @@ export default function AuthScreen() {
                             style={{ width: `${getPasswordStrength()}%` }}
                           ></div>
                         </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {!isLogin && password && !isPasswordValid && 
+                            "Use at least 6 characters with 2 of: uppercase, lowercase, numbers, or special characters."}
+                        </p>
                       </div>
                     )}
                   </>
@@ -453,12 +532,22 @@ export default function AuthScreen() {
 
                 <button
                   type="submit"
+                  disabled={isLoading}
                   className={`w-full py-3 rounded-lg text-white font-medium transition transform hover:scale-105 hover:shadow-md flex items-center justify-center ${
                     isLogin ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'
-                  }`}
+                  } ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  <span>{isLogin ? "Sign In" : "Create Account"}</span>
-                  <ChevronRight size={16} className="ml-1" />
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" />
+                      <span>{isLogin ? "Signing In..." : "Creating Account..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{isLogin ? "Sign In" : "Create Account"}</span>
+                      <ChevronRight size={16} className="ml-1" />
+                    </>
+                  )}
                 </button>
                 
                 {/* Success/Error Messages */}
@@ -492,7 +581,11 @@ export default function AuthScreen() {
               <div className="mt-6 flex items-center justify-center">
                 <button
                   type="button"
-                  onClick={() => setIsLogin(!isLogin)}
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setShowError(false);
+                    setShowSuccess(false);
+                  }}
                   className={`text-sm font-medium ${isLogin ? 'text-indigo-600 hover:text-indigo-500' : 'text-emerald-600 hover:text-emerald-500'}`}
                 >
                   {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}

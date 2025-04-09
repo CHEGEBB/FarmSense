@@ -1,5 +1,8 @@
 'use client'
-import { useState, useEffect, useContext, createContext } from 'react';
+
+import { useState, useEffect, createContext } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   Sprout, 
   Cloud, 
@@ -12,249 +15,353 @@ import {
   X, 
   Settings,
   Droplets,
-  User
+  User,
+  Leaf,
+  LogOut,
+  HelpCircle
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import "../sass/fonts.scss";
+import { motion } from 'framer-motion';
+import { getStoredUser, logout, isAuthenticated } from '../services/authService';
 
-// Create context for sidebar state
+// Context for sidebar state management
 export const SidebarContext = createContext({
-  isOpen: true,
-  toggleSidebar: () => {},
-  sidebarWidth: '240px'
+  sidebarWidth: '280px' // Slightly wider for modern look
 });
 
 const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [activeRoute, setActiveRoute] = useState('/dashboard');
-  const [sidebarWidth, setSidebarWidth] = useState('240px'); 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const pathname = usePathname();
+  const router = useRouter();
+  const SIDEBAR_WIDTH = '280px';
 
-  // Check if mobile on mount and window resize
+  // Fetch user data on mount
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
-        setIsOpen(false);
-        setSidebarWidth('0px');
-      } else {
-        setIsOpen(true);
-        setSidebarWidth('240px');
-      }
-    };
+    const currentUser = getStoredUser();
+    setUser(currentUser);
     
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    // Set active route based on current path
-    setActiveRoute(window.location.pathname);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Update sidebar width when open/closed state changes
-  useEffect(() => {
-    if (isOpen) {
-      setSidebarWidth(isMobile ? '240px' : '240px');
-    } else {
-      setSidebarWidth(isMobile ? '0px' : '72px');
+    // Redirect to login if not authenticated
+    if (!isAuthenticated() && pathname !== '/login' && pathname !== '/register') {
+      router.push('/');
     }
-  }, [isOpen, isMobile]);
+  }, [pathname, router]);
 
+  // Auto-close sidebar when route changes on mobile
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Handle logout - properly destroy the token then navigate
+  const handleLogout = async () => {
+    try {
+      // This will properly remove tokens from localStorage AND notify the server
+      await logout();
+      
+      // Only navigate after the token is destroyed
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Even if server notification fails, ensure client-side logout occurs
+      router.push('/');
+    }
+  };
+
+  // Routes configuration
   const routes = [
     { name: 'Dashboard', path: '/dashboard', icon: Home },
-    { name: 'Crop Monitoring', path: '/crop-monitoring', icon: Sprout },
+    { name: 'Crop Monitoring', path: '/crop', icon: Sprout },
     { name: 'Irrigation', path: '/irrigation', icon: Droplets },
     { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Reports', path: '/reports', icon: BarChart3 },
     { name: 'Crop Library', path: '/library', icon: BookOpen },
-    { name: 'Expenses', path: '/expenses', icon: DollarSign },
     { name: 'Weather', path: '/weather', icon: Cloud },
   ];
 
-  const sidebarVariants = {
-    open: { 
-      width: '240px',
-      transition: { 
-        type: 'spring', 
-        stiffness: 400, 
-        damping: 30 
-      } 
-    },
-    closed: { 
-      width: isMobile ? '0px' : '72px',
-      transition: { 
-        type: 'spring', 
-        stiffness: 400, 
-        damping: 40 
-      } 
+  // Group routes by category
+  const mainRoutes = routes.slice(0, 4);
+  const secondaryRoutes = routes.slice(4);
+
+  // Animation for background elements
+  const floatingAnimation = {
+    animate: {
+      y: [0, -10, 0],
+      transition: {
+        duration: 6,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }
     }
   };
 
-  const handleRouteChange = (path) => {
-    setActiveRoute(path);
-    if (isMobile) setIsOpen(false);
-  };
-
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
   return (
-    <SidebarContext.Provider value={{ isOpen, toggleSidebar, sidebarWidth }}>
-      <>
-        {/* Mobile Overlay */}
-        {isMobile && isOpen && (
+    <SidebarContext.Provider value={{ sidebarWidth: SIDEBAR_WIDTH }}>
+      {/* Mobile menu button */}
+      <button 
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        className="fixed top-5 left-5 p-3 rounded-full bg-emerald-600 text-white shadow-lg z-50 md:hidden hover:bg-emerald-700 transition-colors"
+        aria-label="Toggle menu"
+      >
+        {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      {/* Mobile backdrop overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed md:sticky top-0 left-0 h-screen w-70 z-40 md:z-10
+          shadow-lg transition-transform duration-300 ease-in-out
+          flex flex-col
+          md:translate-x-0 overflow-hidden
+          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}
+        style={{ width: SIDEBAR_WIDTH }}
+      >
+        {/* Background Image with Overlay Gradient */}
+        <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+          {/* Farm background image */}
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-20"
-            onClick={() => setIsOpen(false)}
+            className="absolute inset-0 w-full h-full bg-cover bg-center" 
+            style={{ backgroundImage: 'url("/assets/farm6.jpg")' }}
           />
-        )}
+          
+          {/* Overlay gradient that fades to solid color toward bottom */}
+          <div className="absolute inset-0 bg-gradient-to-b from-emerald-600/70 via-emerald-700/90 to-emerald-800" />
 
-        {/* Toggle Button for Mobile */}
-        <button 
-          onClick={toggleSidebar}
-          className="fixed top-4 left-4 p-2 rounded-md bg-emerald-600 text-white z-30 md:hidden flex items-center justify-center"
-        >
-          {isOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+          {/* Animated floating particles */}
+          <motion.div 
+            className="absolute top-40 right-10 w-16 h-16 rounded-full bg-emerald-300 opacity-10"
+            variants={floatingAnimation}
+            animate="animate"
+          />
+          <motion.div 
+            className="absolute top-80 left-8 w-20 h-20 rounded-full bg-emerald-200 opacity-10"
+            variants={floatingAnimation}
+            animate="animate"
+            transition={{ delay: 1.5 }}
+          />
+          <motion.div 
+            className="absolute bottom-40 right-12 w-12 h-12 rounded-full bg-yellow-200 opacity-10"
+            variants={floatingAnimation}
+            animate="animate"
+            transition={{ delay: 2.8 }}
+          />
+        </div>
 
-        {/* Sidebar */}
-        <motion.div
-          variants={sidebarVariants}
-          animate={isOpen ? 'open' : 'closed'}
-          initial={isMobile ? 'closed' : 'open'}
-          className={`fixed top-0 left-0 h-full bg-gradient-to-b from-emerald-700 to-indigo-900 text-white shadow-xl z-30
-                     ${isMobile ? 'transition-transform' : ''}
-                     ${isMobile && !isOpen ? '-translate-x-full' : 'translate-x-0'}`}
-          style={{
-            backgroundImage: `linear-gradient(to bottom, rgba(16, 185, 129, 0.9), rgba(79, 70, 229, 0.9)), url('/assets/farm-pattern.jpg')`,
-            backgroundSize: 'cover',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-          }}
-        >
-          {/* Logo and Toggle Section */}
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center space-x-2">
-              <div className="bg-white rounded-lg p-1">
-                <Sprout className="text-emerald-600" size={24} />
-              </div>
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="font-bold text-lg"
-                  >
-                    FarmSense
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            {!isMobile && (
-              <button 
-                onClick={toggleSidebar}
-                className="p-1 rounded-md hover:bg-emerald-600 transition-colors"
-              >
-                {isOpen ? <X size={18} /> : <Menu size={18} />}
-              </button>
-            )}
-          </div>
-
-          {/* User Profile Section */}
-          <div className={`px-3 py-4 border-b border-emerald-600/30 ${!isOpen && 'flex justify-center'}`}>
-            <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center">
-                <User size={20} className="text-white" />
-              </div>
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                  >
-                    <div className="font-medium">John Farmer</div>
-                    <div className="text-xs text-emerald-100">Premium Plan</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        {/* Logo Header with Decorative Element */}
+        <div className="relative h-24 flex items-center px-6 z-10">
+          <motion.div 
+            className="absolute top-0 right-0 w-32 h-32 rounded-full bg-yellow-300 opacity-20 transform translate-x-8 -translate-y-8"
+            animate={{ 
+              scale: [1, 1.1, 1],
+              opacity: [0.2, 0.25, 0.2]
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          <div className="flex items-center space-x-3">
+            <motion.div 
+              className="bg-white rounded-lg p-2 shadow-md"
+              animate={{ rotate: [0, 10, 0, -10, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Leaf className="text-emerald-600" size={22} />
+            </motion.div>
+            <div>
+              <h1 className="font-bold text-xl text-white tracking-tight">FarmSense</h1>
+              <p className="text-xs text-emerald-50 font-medium">Smart Agriculture</p>
             </div>
           </div>
+        </div>
 
-          {/* Navigation Links */}
-          <nav className="mt-4 px-2">
-            <ul className="space-y-2">
-              {routes.map((route) => {
+        {/* User Profile */}
+        <div className="px-6 py-4 border-b border-emerald-700/30 relative z-10">
+          <div className="flex items-center space-x-3">
+            <div className="h-11 w-11 rounded-full bg-gradient-to-tr from-emerald-500 to-emerald-400 flex items-center justify-center shadow-sm">
+              <User size={22} className="text-white" />
+            </div>
+            <div>
+              <div className="font-medium text-white">{user?.username || 'Guest User'}</div>
+              <div className="text-xs flex items-center text-emerald-100">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>
+                {user?.plan || 'Basic'} Plan
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Sections */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 relative z-10">
+          {/* Main Navigation */}
+          <div className="mb-6">
+            <h2 className="text-xs uppercase font-semibold text-emerald-100 ml-2 mb-2">
+              Main
+            </h2>
+            <ul className="space-y-1">
+              {mainRoutes.map((route) => {
                 const Icon = route.icon;
-                const isActive = activeRoute === route.path;
+                const isActive = pathname === route.path;
                 
                 return (
                   <li key={route.path}>
-                    <button
-                      onClick={() => handleRouteChange(route.path)}
-                      className={`flex items-center w-full p-2 rounded-lg transition-all duration-300 relative
-                                ${isActive 
-                                  ? 'bg-white text-emerald-700 font-medium shadow-md' 
-                                  : 'text-white hover:bg-emerald-600/30'}`}
+                    <Link 
+                      href={route.path}
+                      className={`
+                        flex items-center w-full p-2.5 rounded-lg transition-all duration-200 relative
+                        ${isActive 
+                          ? 'bg-emerald-400/20 text-white font-medium backdrop-blur-sm' 
+                          : 'text-emerald-50 hover:bg-emerald-700/30 hover:text-white'}
+                      `}
                     >
                       {isActive && (
                         <motion.div 
-                          layoutId="active-pill"
-                          className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-400 rounded-l-md"
+                          layoutId="active-nav-pill"
+                          className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-400 rounded-r-full"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         />
                       )}
-                      <Icon size={isOpen ? 18 : 20} className={`${!isOpen ? 'mx-auto' : 'mr-3'} ${isActive && 'text-emerald-600'}`} />
-                      <AnimatePresence>
-                        {isOpen && (
-                          <motion.span
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                          >
-                            {route.name}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </button>
+                      
+                      {/* Animated highlight when active */}
+                      {isActive && (
+                        <motion.div 
+                          className="absolute inset-0 rounded-lg bg-emerald-300/10"
+                          animate={{ 
+                            boxShadow: ["0 0 0px rgba(16, 185, 129, 0)", "0 0 8px rgba(16, 185, 129, 0.3)", "0 0 0px rgba(16, 185, 129, 0)"] 
+                          }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      )}
+                      
+                      <div className={`
+                        mr-3 p-1.5 rounded-md
+                        ${isActive 
+                          ? 'bg-emerald-400/30 text-white' 
+                          : 'bg-emerald-800/40 text-emerald-100'}
+                      `}>
+                        <Icon size={18} strokeWidth={2} />
+                      </div>
+                      <span>{route.name}</span>
+                      
+                      {/* Active indicator pulse for mobile */}
+                      {isActive && (
+                        <motion.div 
+                          className="ml-auto w-2 h-2 rounded-full bg-emerald-300"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      )}
+                    </Link>
                   </li>
                 );
               })}
             </ul>
-          </nav>
-
-          {/* Footer Actions */}
-          <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-emerald-600/30 ${!isOpen && 'flex justify-center'}`}>
-            <button className="flex items-center text-sm text-emerald-100 hover:text-white transition-colors">
-              <Settings size={isOpen ? 16 : 20} className={`${!isOpen ? 'mx-auto' : 'mr-2'}`} />
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    Settings
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </button>
           </div>
-
-          {/* Subtle Decorative Elements */}
-          <div className="absolute bottom-20 left-0 right-0 opacity-5 pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-full h-24">
-              <path d="M7,2C3.5,7,3.5,12,7,17C10.5,12,10.5,7,7,2Z"/>
-              <path d="M12,2C8.5,7,8.5,12,12,17C15.5,12,15.5,7,12,2Z"/>
-              <path d="M17,2C13.5,7,13.5,12,17,17C20.5,12,20.5,7,17,2Z"/>
-            </svg>
+          
+          {/* Secondary Navigation */}
+          <div>
+            <h2 className="text-xs uppercase font-semibold text-emerald-100 ml-2 mb-2">
+              Resources
+            </h2>
+            <ul className="space-y-1">
+              {secondaryRoutes.map((route) => {
+                const Icon = route.icon;
+                const isActive = pathname === route.path;
+                
+                return (
+                  <li key={route.path}>
+                    <Link 
+                      href={route.path}
+                      className={`
+                        flex items-center w-full p-2.5 rounded-lg transition-all duration-200 relative
+                        ${isActive 
+                          ? 'bg-emerald-400/20 text-white font-medium backdrop-blur-sm' 
+                          : 'text-emerald-50 hover:bg-emerald-700/30 hover:text-white'}
+                      `}
+                    >
+                      {isActive && (
+                        <motion.div 
+                          layoutId="active-resources-pill"
+                          className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-400 rounded-r-full"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                      
+                      {/* Animated highlight when active */}
+                      {isActive && (
+                        <motion.div 
+                          className="absolute inset-0 rounded-lg bg-emerald-300/10"
+                          animate={{ 
+                            boxShadow: ["0 0 0px rgba(16, 185, 129, 0)", "0 0 8px rgba(16, 185, 129, 0.3)", "0 0 0px rgba(16, 185, 129, 0)"] 
+                          }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      )}
+                      
+                      <div className={`
+                        mr-3 p-1.5 rounded-md
+                        ${isActive 
+                          ? 'bg-emerald-400/30 text-white' 
+                          : 'bg-emerald-800/40 text-emerald-100'}
+                      `}>
+                        <Icon size={18} strokeWidth={2} />
+                      </div>
+                      <span>{route.name}</span>
+                      
+                      {/* Active indicator for mobile */}
+                      {isActive && (
+                        <motion.div 
+                          className="ml-auto w-2 h-2 rounded-full bg-emerald-300"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-        </motion.div>
-      </>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="border-t border-emerald-700/30 p-4 space-y-2 relative z-10">
+          <button className="flex items-center w-full p-2 rounded-lg text-emerald-100 hover:bg-emerald-700/30 hover:text-white transition-colors">
+            <div className="mr-3 p-1.5 rounded-md bg-emerald-800/40 text-emerald-100">
+              <Settings size={18} strokeWidth={2} />
+            </div>
+            <span>Settings</span>
+          </button>
+          
+          <button className="flex items-center w-full p-2 rounded-lg text-emerald-100 hover:bg-emerald-700/30 hover:text-white transition-colors">
+            <div className="mr-3 p-1.5 rounded-md bg-emerald-800/40 text-emerald-100">
+              <HelpCircle size={18} strokeWidth={2} />
+            </div>
+            <span>Help & Support</span>
+          </button>
+          
+          <button 
+            onClick={handleLogout}
+            className="flex items-center w-full p-2 rounded-lg text-red-300 hover:bg-red-900/20 hover:text-red-200 transition-colors"
+          >
+            <div className="mr-3 p-1.5 rounded-md bg-red-900/30 text-red-300">
+              <LogOut size={18} strokeWidth={2} />
+            </div>
+            <span>Log Out</span>
+          </button>
+        </div>
+      </aside>
     </SidebarContext.Provider>
   );
-}
+};
 
 export default Sidebar;
