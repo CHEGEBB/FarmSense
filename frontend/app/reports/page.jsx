@@ -39,7 +39,7 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState('all');
   const [isExporting, setIsExporting] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [expandedCard, setExpandedCard] = useState(null);
 
   // Simulate loading data
   useEffect(() => {
