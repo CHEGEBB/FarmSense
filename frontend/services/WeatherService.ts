@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/services/weatherService.ts
 
 import axios from 'axios';
@@ -192,6 +194,7 @@ export const verifyApiKey = async (): Promise<{ isValid: boolean, message: strin
   try {
     // Test the API key with a simple request to validate
     // Using Nairobi as test location for Kenya support
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const testResponse = await axios.get(
       `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=Nairobi`,
       { timeout: 5000 }
@@ -201,6 +204,7 @@ export const verifyApiKey = async (): Promise<{ isValid: boolean, message: strin
       isValid: true, 
       message: 'API key validated successfully' 
     };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     if (error.response && error.response.status === 401) {
       return { 
@@ -390,6 +394,7 @@ export const fetchWeatherData = async (location: FarmLocation): Promise<WeatherD
     
     // Map hourly forecast data
     const hourly = apiData.forecast.forecastday.flatMap((day: any) => 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       day.hour.map((hour: any) => ({
         dt: new Date(hour.time).getTime() / 1000,
         temp: hour.temp_c,

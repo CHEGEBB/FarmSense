@@ -9,7 +9,6 @@ import {
   Calendar, 
   BarChart3, 
   BookOpen, 
-  DollarSign, 
   Home, 
   Menu, 
   X, 
@@ -30,7 +29,12 @@ export const SidebarContext = createContext({
 
 const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  interface User {
+    username: string;
+    plan: string;
+  }
+  
+  const [user, setUser] = useState<User | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const SIDEBAR_WIDTH = '280px';

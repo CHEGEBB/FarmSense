@@ -1,9 +1,16 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // services/authService.js
 
-const API_URL = 'http://localhost:5000/api/auth';
+const API_URL = 'https://farmsense-3lbn.onrender.com/api/auth';
 
 // Register a new user
-export const register = async (userData) => {
+interface UserData {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export const register = async (userData: UserData) => {
   try {
     const response = await fetch(`${API_URL}/register`, {
       method: 'POST',
@@ -26,7 +33,12 @@ export const register = async (userData) => {
 };
 
 // Login a user
-export const login = async (credentials) => {
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export const login = async (credentials: LoginCredentials) => {
   try {
     const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
@@ -49,7 +61,19 @@ export const login = async (credentials) => {
 };
 
 // Store auth data in localStorage
-export const setAuthData = (token, user) => {
+interface AuthData {
+  token: string;
+  user: User;
+}
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  [key: string]: unknown; // To allow additional user properties
+}
+
+export const setAuthData = (token: string, user: User): void => {
   localStorage.setItem('token', token);
   localStorage.setItem('user', JSON.stringify(user));
 };
@@ -113,7 +137,7 @@ export const validateToken = async () => {
       headers: {
         ...authHeader(),
         'Content-Type': 'application/json',
-      },
+      } as HeadersInit,
     });
     
     return response.ok;
@@ -132,7 +156,7 @@ export const logout = async () => {
       headers: {
         ...authHeader(),
         'Content-Type': 'application/json',
-      },
+      } as HeadersInit,
     });
   } catch (error) {
     console.error('Logout error:', error);
@@ -143,14 +167,27 @@ export const logout = async () => {
 };
 
 // Update user profile
-export const updateProfile = async (userData) => {
+interface UpdateProfileData {
+  username?: string;
+  email?: string;
+  [key: string]: unknown; // To allow additional profile fields
+}
+
+interface UpdateProfileResponse {
+  id: string;
+  username: string;
+  email: string;
+  [key: string]: unknown; // To allow additional response fields
+}
+
+export const updateProfile = async (userData: UpdateProfileData): Promise<UpdateProfileResponse> => {
   try {
     const response = await fetch(`${API_URL}/profile`, {
       method: 'PUT',
       headers: {
         ...authHeader(),
         'Content-Type': 'application/json',
-      },
+      } as HeadersInit,
       body: JSON.stringify(userData),
     });
 
@@ -159,11 +196,11 @@ export const updateProfile = async (userData) => {
       throw new Error(errorData.message || 'Profile update failed');
     }
 
-    const updatedUser = await response.json();
+    const updatedUser: UpdateProfileResponse = await response.json();
     
     // Update the stored user data
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    localStorage.setItem('user', JSON.stringify({...currentUser, ...updatedUser}));
+    localStorage.setItem('user', JSON.stringify({ ...currentUser, ...updatedUser }));
     
     return updatedUser;
   } catch (error) {
@@ -173,14 +210,24 @@ export const updateProfile = async (userData) => {
 };
 
 // Change password
-export const changePassword = async (passwordData) => {
+interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+interface ChangePasswordResponse {
+  message: string;
+  [key: string]: unknown; // To allow additional response fields
+}
+
+export const changePassword = async (passwordData: ChangePasswordData): Promise<ChangePasswordResponse> => {
   try {
     const response = await fetch(`${API_URL}/change-password`, {
       method: 'POST',
       headers: {
         ...authHeader(),
         'Content-Type': 'application/json',
-      },
+      } as HeadersInit,
       body: JSON.stringify(passwordData),
     });
 
@@ -197,7 +244,18 @@ export const changePassword = async (passwordData) => {
 };
 
 // Request password reset
-export const requestPasswordReset = async (email) => {
+interface RequestPasswordResetData {
+  email: string;
+}
+
+interface RequestPasswordResetResponse {
+  message: string;
+  [key: string]: unknown; // To allow additional response fields
+}
+
+export const requestPasswordReset = async (
+  email: RequestPasswordResetData['email']
+): Promise<RequestPasswordResetResponse> => {
   try {
     const response = await fetch(`${API_URL}/request-reset`, {
       method: 'POST',
@@ -220,7 +278,19 @@ export const requestPasswordReset = async (email) => {
 };
 
 // Reset password with token
-export const resetPassword = async (resetData) => {
+interface ResetPasswordData {
+  token: string;
+  newPassword: string;
+}
+
+interface ResetPasswordResponse {
+  message: string;
+  [key: string]: unknown; // To allow additional response fields
+}
+
+export const resetPassword = async (
+  resetData: ResetPasswordData
+): Promise<ResetPasswordResponse> => {
   try {
     const response = await fetch(`${API_URL}/reset-password`, {
       method: 'POST',

@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // components/TestimonialCard.tsx
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 
 interface TestimonialCardProps {
   name: string;
@@ -22,7 +22,7 @@ export default function TestimonialCard({ name, role, content, imagePath, delay 
       viewport={{ once: true }}
     >
       <div className="mb-6">
-        <div className="text-emerald-500 text-6xl absolute -top-5 -left-3 opacity-20">"</div>
+        <div className="text-emerald-500 text-6xl absolute -top-5 -left-3 opacity-20">&ldquo;</div>
         <p className="text-gray-600 relative z-10">{content}</p>
       </div>
       <div className="flex items-center">

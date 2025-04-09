@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         headers: {
           ...authHeader(),
           'Content-Type': 'application/json',
-        },
+        } as HeadersInit,
       });
 
       if (!response.ok) {
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Update localStorage with fresh user data
         const token = getToken();
         if (token) {
-          setAuthData(token, userData);
+          setAuthData(token, { ...userData });
         }
       } else {
         setUser(null);
